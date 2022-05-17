@@ -5,11 +5,13 @@ use egui_macroquad::{
     macroquad::{self, prelude::*},
 };
 
-const SPEED: f32 = 0.035;
+const SPEED: f32 = 1.0;
+const GRAVITATIONAL_CONSTANT: f32 = 1.0;
 
-
+#[derive(Copy, Clone, PartialEq)]
 struct Node {
     pub location: Vec2,
+    pub velocity: Vec2,
     pub color: Color,
     pub mass: f32,
 }
@@ -52,7 +54,7 @@ async fn main() {
             let mut overlaps = false;
             let mouse_position = Vec2::new(mouse_x, mouse_y);
 
-            for (index, node) in state.iter().enumerate() {
+            for node in state.iter() {
                 if node.location.distance(mouse_position) < (node.mass + &current_radius) {
                     overlaps = true;
                     break;
@@ -72,6 +74,7 @@ async fn main() {
 
                     state.push(Node {
                         location: mouse_position,
+                        velocity: Vec2::ZERO,
                         color: random_color(&mut rng),
                         mass: current_radius,
                     });
@@ -81,7 +84,7 @@ async fn main() {
             if is_mouse_button_down(MouseButton::Left) {
                 let mouse = mouse_position();
                 let mouse_position = Vec2::new(mouse.0, mouse.1);
-    
+
                 let mut clicked_on_body = false;
 
                 for (index, node) in state.iter().enumerate() {
@@ -107,10 +110,10 @@ async fn main() {
                         node.color
                     }
                 }
-                None => node.color
+                None => node.color,
             };
 
-            draw_circle(node.location.x, node.location.y, node.mass, node.color);
+            draw_circle(node.location.x, node.location.y, node.mass, color);
         }
 
         egui_macroquad::ui(|ctx| {
@@ -119,7 +122,7 @@ async fn main() {
                     true => "Pause",
                     false => "Play",
                 };
-    
+
                 if ui.button(playing_text).clicked() {
                     if playing {
                         playing = false;
@@ -129,7 +132,7 @@ async fn main() {
                 }
             });
         });
-    
+
         egui_macroquad::draw();
 
         next_frame().await
@@ -137,8 +140,29 @@ async fn main() {
 }
 
 fn calc_physx(state: &mut Vec<Node>) {
-    for (index, node) in &mut state.iter().enumerate() {
-        node.location.y += 1.0;
+    let state_clone = state.clone();
+
+    for node in state.iter_mut() {
+        let mut final_force = Vec2::ZERO;
+
+        for other_node in state_clone.iter() {
+            if node == other_node {
+                continue;
+            }
+
+            final_force += -(GRAVITATIONAL_CONSTANT
+                * ((node.mass * other_node.mass)
+                    / node.location.distance_squared(other_node.location)))
+                * ((node.location - other_node.location)
+                    / node.location.distance(other_node.location));
+        }
+
+        let acceleration = final_force / node.mass;
+
+        println!("{}", acceleration);
+
+        node.velocity += acceleration * SPEED;
+        node.location += node.velocity * SPEED;
     }
 }
 
