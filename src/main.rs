@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use ::glam::Vec2;
 use egui_macroquad::{
     egui::{Window, Frame, Style, epaint::Shadow},
@@ -11,7 +13,7 @@ struct Node {
     pub location: Vec2,
     pub velocity: Vec2,
     pub color: Color,
-    pub mass: f32,
+    pub area: f32,
 }
 
 #[macroquad::main("Gravity Simulation")]
@@ -53,7 +55,7 @@ async fn main() {
                 draw_circle(
                     mouse_position.x,
                     mouse_position.y,
-                    current_radius,
+                    radius_from_area(current_radius * 10.0),
                     Color::new(1.0, 1.0, 1.0, 0.5),
                 );
 
@@ -62,7 +64,7 @@ async fn main() {
                         location: mouse_position,
                         velocity: Vec2::ZERO,
                         color: WHITE,
-                        mass: current_radius,
+                        area: current_radius * 10.0,
                     });
                     currently_selected = Some(state.len() - 1);
                 }
@@ -103,12 +105,12 @@ fn draw(state: &Vec<Node>, currently_selected: Option<usize>) {
     for (index, node) in state.iter().enumerate() {
         if let Some(currently_selected) = currently_selected {
             if index == currently_selected {
-                draw_circle(node.location.x, node.location.y, node.mass, RED);
+                draw_circle(node.location.x, node.location.y, radius_from_area(node.area), RED);
             } else {
-                draw_circle(node.location.x, node.location.y, node.mass, node.color);
+                draw_circle(node.location.x, node.location.y, radius_from_area(node.area), node.color);
             }
         } else {
-            draw_circle(node.location.x, node.location.y, node.mass, node.color);
+            draw_circle(node.location.x, node.location.y, radius_from_area(node.area), node.color);
         }
     }
 }
@@ -132,7 +134,7 @@ fn calc_overlaps(state: &mut Vec<Node>, currently_selected: &mut Option<usize>) 
     let state_clone = state.clone();
 
     for (index, node) in state_clone.iter().enumerate()  {
-        if let Some(overlap_index) =  overlaps_at_all((node.location, node.mass), &state_clone) {
+        if let Some(overlap_index) =  overlaps_at_all((node.location, radius_from_area(node.area)), &state_clone) {
             if overlap_index == index {
                 continue;
             }
@@ -140,9 +142,9 @@ fn calc_overlaps(state: &mut Vec<Node>, currently_selected: &mut Option<usize>) 
             let node = &mut state[index];
             let overlap_node = &state_clone[overlap_index];
 
-            node.mass += overlap_node.mass;
-            node.velocity = (overlap_node.velocity / overlap_node.mass) + (node.velocity / node.mass);
-            node.location = if node.mass > overlap_node.mass {
+            node.area += overlap_node.area;
+            node.velocity = (overlap_node.velocity / overlap_node.area) + (node.velocity / node.area);
+            node.location = if node.area > overlap_node.area {
                 node.location
             } else {
                 overlap_node.location
@@ -174,7 +176,7 @@ fn calc_physx(state: &mut Vec<Node>) {
             let node_two = &state_clone[other_index];
 
             final_force += -(GRAVITATIONAL_CONSTANT
-                * ((node_one.mass * node_two.mass)
+                * ((node_one.area * node_two.area)
                     / node_one.location.distance_squared(node_two.location)))
                 * ((node_one.location - node_two.location)
                     / node_one.location.distance(node_two.location));
@@ -183,7 +185,7 @@ fn calc_physx(state: &mut Vec<Node>) {
         let td = 0.035;
 
         let node = &mut state[index];
-        node.velocity += (final_force / node.mass) * td;
+        node.velocity += (final_force / node.area) * td;
         node.location += node.velocity * td;
     }
 }
@@ -192,7 +194,7 @@ fn overlaps_at_all(node: (Vec2, f32), state: &Vec<Node>) -> Option<usize> {
     let mut o = None;
 
     for (index, other_node) in state.iter().enumerate() {
-        if circles_overlap((node.0, node.1), (other_node.location, other_node.mass)) {
+        if circles_overlap((node.0, node.1), (other_node.location, other_node.area)) {
             o = Some(index);
         }
     }
@@ -201,7 +203,7 @@ fn overlaps_at_all(node: (Vec2, f32), state: &Vec<Node>) -> Option<usize> {
 }
 
 fn circles_overlap(node_one: (Vec2, f32), node_two: (Vec2, f32)) -> bool {
-    if node_one.0.distance(node_two.0) < (node_one.1 + node_two.1) {
+    if node_one.0.distance(node_two.0) < (radius_from_area(node_one.1) + radius_from_area(node_two.1)) {
         true
     } else {
         false
@@ -214,4 +216,8 @@ fn opposite(b: bool) -> bool {
     } else {
         true
     }
+}
+
+fn radius_from_area(area: f32) -> f32 {
+    (area / PI).sqrt()
 }
