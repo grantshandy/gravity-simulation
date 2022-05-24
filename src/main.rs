@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use ::glam::Vec2;
 use egui_macroquad::{
-    egui::{Window, Frame, Style, epaint::Shadow},
+    egui::{epaint::Shadow, Align2, Frame, Style, Window},
     macroquad::{self, prelude::*},
 };
 
@@ -19,7 +19,6 @@ struct Node {
 #[macroquad::main("Gravity Simulation")]
 async fn main() {
     let mut state: Vec<Node> = Vec::new();
-    let mut currently_selected: Option<usize> = None;
     let mut current_radius: f32 = 10.0;
     let mut playing = false;
 
@@ -34,65 +33,70 @@ async fn main() {
 
         if playing {
             calc_physx(&mut state);
-            calc_overlaps(&mut state, &mut currently_selected);
+            calc_overlaps(&mut state);
         }
 
         if is_key_down(KeyCode::R) {
             state = Vec::new();
-            currently_selected = None;
         }
 
-        if edit_mode {
-            if let Some(index) = overlaps_at_all((mouse_position, current_radius), &state) {
-                if clicking {
-                    currently_selected = Some(index);
-                }
-            } else if let Some(currently_selected) = currently_selected {
-                let currently_selected = state[currently_selected];
+        if edit_mode
+            && overlaps_at_all(
+                (mouse_position, radius_from_area(current_radius) * 10.0),
+                &state,
+            )
+            .is_none()
+        {
+            draw_circle(
+                mouse_position.x,
+                mouse_position.y,
+                radius_from_area(current_radius * 10.0),
+                Color::new(1.0, 1.0, 1.0, 0.5),
+            );
 
-                draw_line(mouse_position.x, mouse_position.y, currently_selected.location.x, currently_selected.location.y, 4.0, RED);
-            } else {
-                draw_circle(
-                    mouse_position.x,
-                    mouse_position.y,
-                    radius_from_area(current_radius * 10.0),
-                    Color::new(1.0, 1.0, 1.0, 0.5),
-                );
-
-                if clicking {
-                    state.push(Node {
-                        location: mouse_position,
-                        velocity: Vec2::ZERO,
-                        color: WHITE,
-                        area: current_radius * 10.0,
-                    });
-                    currently_selected = Some(state.len() - 1);
-                }
-            }
-        } else if clicking {
-            if let Some(index) = overlaps_at_all((mouse_position, 0.0), &state) {
-                currently_selected = Some(index);
-            } else {
-                currently_selected = None;
+            if clicking {
+                state.push(Node {
+                    location: mouse_position,
+                    velocity: Vec2::ZERO,
+                    color: WHITE,
+                    area: current_radius * 10.0,
+                });
             }
         }
 
-        draw(&state, currently_selected);
+        draw(&state);
 
         egui_macroquad::ui(|ctx| {
             let mut shadow = Shadow::default();
             shadow.extrusion = 0.0;
-        
-            Window::new("")
+
+            Window::new("menu")
                 .title_bar(false)
-                .fixed_pos([20.0, 20.0])
+                .anchor(Align2::LEFT_TOP, [20.0, 20.0])
                 .resizable(false)
                 .frame(Frame::window(&Style::default()).shadow(shadow))
                 .show(ctx, |ui| {
                     if ui.button(if playing { "Pause" } else { "Play" }).clicked() {
                         playing = opposite(playing);
                     }
+                    if ui.button("Reset").clicked() {
+                        state = Vec::new();
+                    }
                 });
+
+            if !state.is_empty() {
+                Window::new("label")
+                    .title_bar(false)
+                    .anchor(Align2::RIGHT_TOP, [-20.0, 20.0])
+                    .resizable(false)
+                    .frame(Frame::window(&Style::default()).shadow(shadow))
+                    .show(ctx, |ui| {
+                        ui.label("Velocities:");
+                        for (num, node) in state.iter().enumerate() {
+                            ui.label(format!("{num}: [{:.2}, {:.2}]", node.velocity.x, node.velocity.y));
+                        }
+                    });
+            }
         });
 
         egui_macroquad::draw();
@@ -101,17 +105,14 @@ async fn main() {
     }
 }
 
-fn draw(state: &Vec<Node>, currently_selected: Option<usize>) {
-    for (index, node) in state.iter().enumerate() {
-        if let Some(currently_selected) = currently_selected {
-            if index == currently_selected {
-                draw_circle(node.location.x, node.location.y, radius_from_area(node.area), RED);
-            } else {
-                draw_circle(node.location.x, node.location.y, radius_from_area(node.area), node.color);
-            }
-        } else {
-            draw_circle(node.location.x, node.location.y, radius_from_area(node.area), node.color);
-        }
+fn draw(state: &Vec<Node>) {
+    for node in state.iter() {
+        draw_circle(
+            node.location.x,
+            node.location.y,
+            radius_from_area(node.area),
+            node.color,
+        );
     }
 }
 
@@ -130,11 +131,13 @@ fn update_radius(current_radius: &mut f32) {
     }
 }
 
-fn calc_overlaps(state: &mut Vec<Node>, currently_selected: &mut Option<usize>) {
+fn calc_overlaps(state: &mut Vec<Node>) {
     let state_clone = state.clone();
 
-    for (index, node) in state_clone.iter().enumerate()  {
-        if let Some(overlap_index) =  overlaps_at_all((node.location, radius_from_area(node.area)), &state_clone) {
+    for (index, node) in state_clone.iter().enumerate() {
+        if let Some(overlap_index) =
+            overlaps_at_all((node.location, radius_from_area(node.area)), &state_clone)
+        {
             if overlap_index == index {
                 continue;
             }
@@ -143,18 +146,13 @@ fn calc_overlaps(state: &mut Vec<Node>, currently_selected: &mut Option<usize>) 
             let overlap_node = &state_clone[overlap_index];
 
             node.area += overlap_node.area;
-            node.velocity = (overlap_node.velocity / overlap_node.area) + (node.velocity / node.area);
+            node.velocity =
+                (overlap_node.velocity / overlap_node.area) + (node.velocity / node.area);
             node.location = if node.area > overlap_node.area {
                 node.location
             } else {
                 overlap_node.location
             };
-
-            if let Some(cs) = currently_selected {
-                if *cs == overlap_index {
-                    *currently_selected = Some(index);
-                }
-            }
 
             state.remove(overlap_index);
         }
@@ -203,7 +201,9 @@ fn overlaps_at_all(node: (Vec2, f32), state: &Vec<Node>) -> Option<usize> {
 }
 
 fn circles_overlap(node_one: (Vec2, f32), node_two: (Vec2, f32)) -> bool {
-    if node_one.0.distance(node_two.0) < (radius_from_area(node_one.1) + radius_from_area(node_two.1)) {
+    if node_one.0.distance(node_two.0)
+        < (radius_from_area(node_one.1) + radius_from_area(node_two.1))
+    {
         true
     } else {
         false
