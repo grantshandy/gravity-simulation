@@ -27,7 +27,7 @@ async fn main() {
         let edit_mode = is_key_down(KeyCode::LeftShift);
         let clicking = is_mouse_button_down(MouseButton::Left);
 
-        clear_background(DARKGRAY);
+        clear_background(Color::from_rgba(30, 58, 138, 255));
         update_radius(&mut current_radius);
 
         if playing {
