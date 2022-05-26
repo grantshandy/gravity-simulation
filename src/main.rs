@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use ::glam::Vec2;
 use egui_macroquad::{
-    egui::{epaint::Shadow, Align2, Frame, Style, Window},
+    egui::{epaint::Shadow, Align2, Frame, Style, Window, Slider},
     macroquad::{self, prelude::*},
 };
 
@@ -20,7 +20,10 @@ struct Node {
 async fn main() {
     let mut state: Vec<Node> = Vec::new();
     let mut current_radius: f32 = 10.0;
+    let mut current_x_velocity: f32 = 0.0;
+    let mut current_y_velocity: f32 = 0.0;
     let mut playing = false;
+    let mut speed: u8 = 1;
 
     loop {
         let (mouse_x, mouse_y) = mouse_position();
@@ -32,8 +35,10 @@ async fn main() {
         update_radius(&mut current_radius);
 
         if playing {
-            calc_physx(&mut state);
-            calc_overlaps(&mut state);
+            for _ in 0..speed {
+                calc_physx(&mut state);
+                calc_overlaps(&mut state);
+            }
         }
 
         if is_key_down(KeyCode::R) {
@@ -57,7 +62,7 @@ async fn main() {
             if clicking {
                 state.push(Node {
                     location: mouse_position,
-                    velocity: Vec2::ZERO,
+                    velocity: Vec2::new(current_x_velocity, current_y_velocity),
                     color: WHITE,
                     area: current_radius * 10.0,
                 });
@@ -70,6 +75,16 @@ async fn main() {
             let mut shadow = Shadow::default();
             shadow.extrusion = 0.0;
 
+            Window::new("parameters")
+            .title_bar(false)
+            .anchor(Align2::LEFT_BOTTOM, [20.0, -20.0])
+            .resizable(false)
+            .frame(Frame::window(&Style::default()).shadow(shadow))
+            .show(ctx, |ui| {
+                ui.add(Slider::new(&mut current_x_velocity, -50.0..=50.0).text("Initial X Velocity"));
+                ui.add(Slider::new(&mut current_y_velocity, -50.0..=50.0).text("Initial Y Velocity"));
+            });
+
             Window::new("menu")
                 .title_bar(false)
                 .anchor(Align2::LEFT_TOP, [20.0, 20.0])
@@ -80,8 +95,11 @@ async fn main() {
                         playing = opposite(playing);
                     }
                     if ui.button("Reset").clicked() {
+                        current_x_velocity = 0.0;
+                        current_y_velocity = 0.0;
                         state = Vec::new();
                     }
+                    ui.add(Slider::new(&mut speed, 1..=6).text("Speed"));
                 });
 
             if !state.is_empty() {
