@@ -1,33 +1,36 @@
 <html lang="en">
+  <head>
+      <meta charset="utf-8">
+      <title>Gravity Simulation Project</title>
+      <script src="https://cdn.tailwindcss.com"></script>
+  </head>
 
-<head>
-    <meta charset="utf-8">
-    <title>Gravity Simulation Project</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-
-<body class="bg-blue-900 text-white text-center p-5 space-y-5">
-    <h1 class="font-bold text-5xl">Gravity</h1>
-    <p>The universal gravitation law states that all matter, no matter the size, attracts every other bit of matter. Every object has a gravitational pull. When an object has a large mass and is very dense, it is going to have a stronger gravitational pull. If you have two objects with some mass, they will slowly come together. </p>
-  
-    <div class="inline-grid grid-cols-5 grid-rows-1">
-      <ul class="list-disc col-span-2 p-4 text-left">
-        <li>Gravity equation - g=GM₁/r¹</li>
-        <li>Gravitational Constant - G=6.67 x 10⁻¹¹</li>
-        <li>Fg = Force of gravity between two objects. Both will feel this</li>
-        <li>g = Acceleration due to gravity, constant regardless of m2</li>
-        <li>G = Gravitational Constant, a description of gravity for the universe</li>
-        <li>M1m2 = The two masses, M1 is usually the larger mass</li>
-        <li>R2 = The distance between our two masses, squared</li>
-      </ul>
-      <canvas id="glcanvas" tabindex='1' class="col-span-3 h-full w-full rounded-lg"></canvas>
+  <body class="bg-blue-900 text-white text-center p-5 space-y-5">
+      <h1 class="font-bold text-5xl">Gravity</h1>
+      <p>The universal gravitation law states that all matter, no matter the size, attracts every other bit of matter. Every object has a gravitational pull. When an object has a large mass and is very dense, it is going to have a stronger gravitational pull. If you have two objects with some mass, they will slowly come together. </p>
+    
+      <div class="inline-grid grid-cols-5 grid-rows-1">
+        <div class="col-span-2 p-4 text-left">
+          <ul class="list-disc">
+            <li>Gravity equation - g=GM₁/r¹</li>
+            <li>Gravitational Constant - G=6.67 x 10⁻¹¹</li>
+            <li>Fg = Force of gravity between two objects. Both will feel this</li>
+            <li>g = Acceleration due to gravity, constant regardless of m2</li>
+            <li>G = Gravitational Constant, a description of gravity for the universe</li>
+            <li>M1m2 = The two masses, M1 is usually the larger mass</li>
+            <li>R2 = The distance between our two masses, squared</li>
+          </ul>
+          <p class="my-5"><i>Instructions: Hold shift and click to place objects. Scroll to change the mass of the objects then press play to see it in action.</i></p>
+        </div>
+        <canvas id="glcanvas" tabindex='1' class="col-span-3 h-full w-full rounded-lg"></canvas>
+      </div>
+      <script src="https://not-fl3.github.io/miniquad-samples/mq_js_bundle.js"></script>
+      <script>load("gravity-simulation.wasm");</script> <!-- Your compiled wasm file -->
+    
+    <h2 class="font-bold text-3xl">Black Hole Demo</h2>
+    <div class="grid place-items-center">
+      <iframe src="https://scratch.mit.edu/projects/693291774/embed" allowtransparency="true" width="485" height="402" frameborder="0" scrolling="no" allowfullscreen></iframe> 
     </div>
-    <script src="https://not-fl3.github.io/miniquad-samples/mq_js_bundle.js"></script>
-    <script>load("gravity-simulation.wasm");</script> <!-- Your compiled wasm file -->
-   
-  <h2 class="font-bold text-3xl">Black Holes</h2>
-  <p>The object with the strongest gravitational pull is a Black Hole. Black Holes have the strongest pull that we know of, the gravitational pull is so strong that it doesn’t even let out light. Black holes are so strong because they have a lot of mass that is squeezed into a small area. The boundary of the Black Hole is called the Event Horizon, it is the point of no return. When objects pass the Black Holes Event Horizon they get sucked into the singularity. At this point, space, time, and the law of physics no longer apply. 
-</p>
-</body>
-
+  </p>
+  </body>
 </html>
